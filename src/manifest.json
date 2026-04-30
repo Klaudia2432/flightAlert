@@ -6,5 +6,12 @@
   "action": {
     "default_popup": "index.html",
     "default_icon": "icon.png"
+  },
+  "permissions": ["notifications", "alarms", "storage"],
+  "host_permissions": [
+    "https://opensky-network.org/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
   }
 }

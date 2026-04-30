@@ -1,35 +1,24 @@
 let pageHeader = document.getElementById("page-header");
 
-let boeingModels = [
-    "Boeing 737",
-    "Boeing 757"
-];
+chrome.runtime.sendMessage({ type: "GET_FLIGHT" }, (data) => {
+  console.log("RESPONSE:", data);
 
-let airbusModels = [
-    "Airbus 319", 
-    "Airbus 320", 
-    "Airbus 321"
-];
+  if (!data || !data.plane) {
+    pageHeader.innerText = "No flights nearby";
+    return;
+  }
 
-let airlines = [
-    "Wizzair",
-    "Ryanair",
-    "British Airways",
-    "EasyJet",
-    "United"
-];
+  const plane = data.plane;
+  const distance = data.distance;
 
-let glasgowAirport = {
-    "name" : "Glasgow",
-    "code" : "GLA"
-}
+  const callsign = plane[1]?.trim() || "Unknown";
 
-let edinburghAirport = {
-    "name" : "Edinburgh",
-    "code" : "EDI"
-}
+  const altitudeFeet = plane[7] ? plane[7] * 3.28084 : 0;
+  const speedKnots = plane[9] ? plane[9] * 1.94384 : 0;
 
-alert(airlines[3] + " " + airbusModels[2]);
-alert("Altitude 3500 ft");
-pageHeader.innerText = "5 minutes until " + airlines[3] + " " + airbusModels[2] + 
-" from " + glasgowAirport.code + " to " + edinburghAirport.code + " is flying above your house.";
+  pageHeader.innerText =
+    `${callsign}
+    Distance: ${distance.toFixed(2)} km
+    Alt: ${altitudeFeet.toFixed(0)} ft
+    Speed: ${speedKnots.toFixed(0)} kts`;
+});
