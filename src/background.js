@@ -1,15 +1,15 @@
 async function fetchNearbyAircraft() {
     
     const url =
-    "https://opensky-network.org/api/states/all?lamin=51.0&lomin=-1.5&lamax=52.0&lomax=0.5";
+    "https://opensky-network.org/api/states/all?lamin=55.3&lomin=-4.8&lamax=56.2&lomax=-3.2";
 
     const res = await fetch(url);
     const data = await res.json();
     console.log("OPEN SKY RAW:", data);
     const toRadians = degrees => degrees * (Math.PI / 180);
 
-    let lat1 = toRadians(51.4700);
-    let lon1 = toRadians(-0.4543);
+    let lat1 = toRadians(55.7776);
+    let lon1 = toRadians(-4.0536);
     
     let closestPlane = null;
     let shortestDistance = 200000;
@@ -21,8 +21,10 @@ async function fetchNearbyAircraft() {
     }
     
     for(const plane of planes) {
-        if (plane[5] == null || plane[6] == null) continue;
-        if (plane[8] !== true) continue;
+        if (plane[5] == null || plane[6] == null) continue; // coords
+        if (plane[8] === true) continue; // on ground
+        if (plane[7] == null || plane[7] < 1000) continue; // too low
+        if (plane[9] == null || plane[9] < 50) continue; // too slow
 
         let lat2 = toRadians(plane[6]);
         let lon2 = toRadians(plane[5]);
@@ -33,6 +35,7 @@ async function fetchNearbyAircraft() {
         let a = (Math.sin(dLat / 2) * Math.sin(dLat / 2)) + Math.cos(lat1) * Math.cos(lat2) * (Math.sin(dLon / 2) * Math.sin(dLon / 2));
         let c = 2 * Math.atan2(Math.sqrt(a),Math.sqrt(1 - a));
         c *= 6371;
+        if (c > 50) continue;
 
         if(c<shortestDistance) {
             shortestDistance = c;
