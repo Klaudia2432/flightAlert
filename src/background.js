@@ -21,10 +21,10 @@ async function fetchNearbyAircraft() {
     }
     
     for(const plane of planes) {
-        if (plane[5] == null || plane[6] == null) continue; // coords
-        if (plane[8] === true) continue; // on ground
-        if (plane[7] == null || plane[7] < 1000) continue; // too low
-        if (plane[9] == null || plane[9] < 50) continue; // too slow
+        if (plane[5] == null || plane[6] == null) continue;
+        if (plane[8] === true) continue;
+        if (plane[7] == null || plane[7] < 1000) continue;
+        if (plane[9] == null || plane[9] < 50) continue;
 
         let lat2 = toRadians(plane[6]);
         let lon2 = toRadians(plane[5]);
@@ -52,6 +52,6 @@ async function fetchNearbyAircraft() {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "GET_FLIGHT") {
     fetchNearbyAircraft().then(sendResponse);
-    return true; // keeps async channel open
+    return true;
   }
 });
