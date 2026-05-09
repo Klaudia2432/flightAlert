@@ -18,7 +18,7 @@ chrome.runtime.sendMessage({ type: "GET_FLIGHT" }, (data) => {
 
   pageHeader.innerText =
     `${callsign}
-    Distance: ${distance.toFixed(2)} mi
+    Distance: ${distance.toFixed(1)} mi
     Alt: ${altitudeFeet.toFixed(0)} ft
     Speed: ${speedKnots.toFixed(0)} kts`;
 });
