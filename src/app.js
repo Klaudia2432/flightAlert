@@ -9,7 +9,7 @@ chrome.runtime.sendMessage({ type: "GET_FLIGHT" }, (data) => {
   }
 
   const plane = data.plane;
-  const distance = data.distance;
+  const distance = data.distance ? data.distance * 0.621371 : 0;
 
   const callsign = plane[1]?.trim() || "Unknown";
 
@@ -18,7 +18,7 @@ chrome.runtime.sendMessage({ type: "GET_FLIGHT" }, (data) => {
 
   pageHeader.innerText =
     `${callsign}
-    Distance: ${distance.toFixed(2)} km
+    Distance: ${distance.toFixed(2)} mi
     Alt: ${altitudeFeet.toFixed(0)} ft
     Speed: ${speedKnots.toFixed(0)} kts`;
 });
