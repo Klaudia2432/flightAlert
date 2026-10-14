@@ -1,17 +1,24 @@
 {
   "name": "Flight Alert",
-  "description": "Flight notification extension",
-  "version": "1.0",
+  "description": "Aircraft approaching home notifications",
+  "version": "1.1.0",
   "manifest_version": 3,
-  "action": {
-    "default_popup": "index.html",
-    "default_icon": "icon.png"
-  },
-  "permissions": ["notifications", "alarms", "storage"],
+  "permissions": [
+    "notifications",
+    "alarms",
+    "storage"
+  ],
   "host_permissions": [
     "https://opensky-network.org/*"
   ],
   "background": {
     "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": "icon.png"
+  },
+  "icons": {
+    "128": "icon.png"
   }
 }
