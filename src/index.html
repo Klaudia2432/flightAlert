@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,12 +7,24 @@
   <title>Flight Alert</title>
 
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      width: 350px;
+      min-width: 350px;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       font-family: Arial, sans-serif;
-      width: 310px;
+      width: 100%;
       padding: 16px;
       margin: 0;
       color: #202124;
+      background: #ffffff;
     }
 
     h1 {
@@ -22,6 +35,7 @@
     .muted {
       color: #666;
       font-size: 12px;
+      line-height: 1.5;
     }
 
     .status {
@@ -31,12 +45,23 @@
       border-radius: 8px;
     }
 
+    #page-header {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    #status-description {
+      margin-top: 4px;
+    }
+
     .metric {
       display: flex;
       justify-content: space-between;
       gap: 12px;
       padding: 7px 0;
       border-bottom: 1px solid #e5e7eb;
+      font-size: 12px;
     }
 
     .metric:last-child {
@@ -59,33 +84,144 @@
       cursor: pointer;
     }
 
+    button:hover:not(:disabled) {
+      background: #1e40af;
+    }
+
     button:disabled {
       opacity: 0.6;
       cursor: wait;
+    }
+
+    #updated {
+      white-space: pre-line;
     }
 
     #error {
       color: #b91c1c;
       white-space: normal;
       font-size: 12px;
+      line-height: 1.5;
+    }
+
+    #updated {
+      margin: 0 0 14px;
+    }
+
+    .settings {
+      margin: 14px 0;
+      padding: 12px;
+      background: #f1f5f9;
+      border-radius: 8px;
+    }
+
+    .settings h2 {
+      font-size: 14px;
+      margin: 0 0 14px;
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+
+    .setting-row strong {
+      white-space: nowrap;
+    }
+
+    .settings input[type="range"] {
+      display: block;
+      width: 100%;
+      margin: 0;
+      cursor: pointer;
+      accent-color: #1d4ed8;
+    }
+
+    .range-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+      color: #666;
+      font-size: 11px;
+    }
+
+    .settings-note {
+      color: #666;
+      font-size: 11px;
+      line-height: 1.5;
+      margin: 12px 0 0;
+    }
+
+    #settings-status {
+      color: #166534;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    #settings-status:not(:empty) {
+      margin-top: 8px;
     }
   </style>
 </head>
 
 <body>
   <h1>✈ Flight Alert</h1>
-  <div class="muted">Aircraft approaching your home</div>
+
+  <div class="muted">
+    Know when aircraft are flying near your home
+  </div>
 
   <div class="status">
-    <div id="page-header">Checking OpenSky...</div>
+    <div id="page-header">Checking for aircraft...</div>
+    <div id="status-description" class="muted"></div>
     <div id="details"></div>
   </div>
 
   <div id="error" role="status"></div>
-  <p class="muted" id="updated">Waiting for data...</p>
+
+  <p class="muted" id="updated">
+    Waiting for flight data...
+  </p>
+
+  <div class="settings">
+    <h2>Your Preferences</h2>
+
+    <div class="setting-row">
+      <label for="detection-radius">
+        How close to your home?
+      </label>
+
+      <strong id="radius-value">2 miles</strong>
+    </div>
+
+    <input
+      type="range"
+      id="detection-radius"
+      min="1"
+      max="20"
+      step="1"
+      value="2"
+    >
+
+    <div class="range-labels">
+      <span>1 mi</span>
+      <span>20 mi</span>
+    </div>
+
+    <p class="settings-note">
+      We'll alert you when an aircraft is expected
+      to fly within this distance of your home.
+    </p>
+
+    <div id="settings-status" role="status"></div>
+  </div>
 
   <button id="refresh" type="button">
-    Refresh aircraft
+    Check for aircraft
   </button>
 
   <script src="app.js"></script>
