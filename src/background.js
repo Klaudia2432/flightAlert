@@ -158,11 +158,6 @@ function predictPass(plane, nowSeconds, settings) {
     // Calculate the direction of the aircraft relative to home.
     const position = localCoordinates(lat, lon);
 
-    const bearingFromHome =
-    (Math.atan2(position.east, position.north) * 180 / Math.PI + 360) % 360;
-
-    const approachingFrom = getCompassDirection(bearingFromHome);
-
   if (currentDistanceMiles > CONFIG.maxDistanceMiles) {
     return null;
   }
@@ -181,6 +176,12 @@ function predictPass(plane, nowSeconds, settings) {
 
   const northNow =
     position.north + northVelocity * effectiveAge / 1000;
+
+  // Calculate the approach direction from the estimated current position.
+  const bearingFromHome =
+    (Math.atan2(eastNow, northNow) * 180 / Math.PI + 360) % 360;
+
+  const approachingFrom = getCompassDirection(bearingFromHome);
 
   const speedSquared =
     eastVelocity ** 2 + northVelocity ** 2;
@@ -483,21 +484,44 @@ async function fetchNearbyAircraft(forceRefresh = false) {
         const elapsedMinutes =
           (now - cached.checkedAt) / 60000;
 
-        const predictions = (cached.predictions || [])
-          .map(plane => ({
-            ...plane,
-            etaMinutes: plane.etaMinutes - elapsedMinutes
-          }))
-          .filter(plane => plane.etaMinutes > 0);
+    // Exclude predictions based on stale aircraft positions.
+    let stalePredictionsCount = 0;
+
+    const predictions = (cached.predictions || [])
+    .map(plane => ({
+        ...plane,
+        etaMinutes: plane.etaMinutes - elapsedMinutes
+    }))
+    .filter(plane => {
+        const positionAgeSeconds =
+        (now / 1000) - Number(plane.timePosition);
+
+        const isStale =
+        !Number.isFinite(positionAgeSeconds) ||
+        positionAgeSeconds > CONFIG.staleAfterSeconds;
+
+        if (isStale) {
+        stalePredictionsCount++;
+        }
+
+        return (
+        plane.etaMinutes > 0 &&
+        Number.isFinite(positionAgeSeconds) &&
+        positionAgeSeconds >= -30 &&
+        positionAgeSeconds <= CONFIG.staleAfterSeconds
+        );
+    });
 
         return {
-          ...cached,
-          predictions,
-          plane: predictions[0] || null,
-          cached: true,
-          nextAllowedFetchAt,
-          manualRefreshAvailableAt,
-          settings
+        ...cached,
+        predictions,
+        plane: predictions[0] || null,
+        staleData:
+            predictions.length === 0 && stalePredictionsCount > 0,
+        cached: true,
+        nextAllowedFetchAt,
+        manualRefreshAvailableAt,
+        settings
         };
       }
 

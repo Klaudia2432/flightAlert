@@ -64,10 +64,31 @@ function startPositionAgeTimer(plane, checkedAt) {
       const minutes = Math.floor(seconds / 60);
       valueElement.textContent = `${minutes} min ago`;
     }
+
+    // Hide aircraft predictions when position data becomes stale.
+    if (seconds > 90) {
+      clearPositionAgeTimer();
+
+      header.textContent = "Waiting for fresh aircraft data";
+
+      statusDescription.textContent =
+        "Previously detected aircraft positions are outdated. " +
+        "Flight Alert will check again automatically.";
+
+      details.replaceChildren();
+
+      updated.textContent =
+        "Aircraft position is outdated. Waiting for fresh data.";
+
+      return;
+    }
   }
 
   updateAge();
-  positionAgeTimer = setInterval(updateAge, 1000);
+
+  if (Date.now() - positionUpdatedAt <= 90 * 1000) {
+    positionAgeTimer = setInterval(updateAge, 1000);
+  }
 }
 
 function addMetric(label, value) {
@@ -302,6 +323,23 @@ function render(data) {
           formatTime(data.nextAllowedFetchAt)
         }. Click 'Check for aircraft' to refresh faster. Manual refresh is available every 1 minute.`
       : "Waiting for new flight information.";
+
+    return;
+  }
+
+  // Handle outdated aircraft positions.
+  if (data.staleData) {
+    header.textContent = "Waiting for fresh aircraft data";
+
+    statusDescription.textContent =
+      "Previously detected aircraft positions are outdated. " +
+      "Flight Alert will check again automatically.";
+
+    updated.textContent = data.nextAllowedFetchAt
+      ? `Next automatic update around ${
+          formatTime(data.nextAllowedFetchAt)
+        }.`
+      : "Waiting for fresh flight information.";
 
     return;
   }
@@ -585,7 +623,29 @@ radiusSlider.addEventListener("input", () => {
 
 radiusSlider.addEventListener("change", saveSettings);
 
+// Update the popup when background monitoring receives new flight data.
+function handleFlightStatusChange(changes, areaName) {
+  if (
+    areaName !== "local" ||
+    !changes.latestFlightStatus ||
+    isRefreshing ||
+    settingsSaving
+  ) {
+    return;
+  }
+
+  const data = changes.latestFlightStatus.newValue;
+
+  if (data) {
+    render(data);
+  }
+}
+
+chrome.storage.onChanged.addListener(handleFlightStatusChange);
+
 window.addEventListener("pagehide", () => {
+  chrome.storage.onChanged.removeListener(handleFlightStatusChange);
+
   clearRateLimitTimer();
   clearPositionAgeTimer();
   clearManualRefreshTimer();
