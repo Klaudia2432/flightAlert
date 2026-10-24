@@ -70,6 +70,19 @@ function headingDifference(a, b) {
   return Math.abs(((a - b + 540) % 360) - 180);
 }
 
+// Convert a compass bearing into one of eight directions.
+function getCompassDirection(degrees) {
+  const directions = [
+    'N', 'NE', 'E', 'SE',
+    'S', 'SW', 'W', 'NW'
+  ];
+
+  const normalized = ((degrees % 360) + 360) % 360;
+  const index = Math.round(normalized / 45) % 8;
+
+  return directions[index];
+}
+
 // Validate the user-selected detection radius.
 function validateRadius(radius) {
   const value = Number(radius);
@@ -142,6 +155,14 @@ function predictPass(plane, nowSeconds, settings) {
   const currentDistanceMiles =
     distanceKm(HOME.lat, HOME.lon, lat, lon) * 0.621371;
 
+    // Calculate the direction of the aircraft relative to home.
+    const position = localCoordinates(lat, lon);
+
+    const bearingFromHome =
+    (Math.atan2(position.east, position.north) * 180 / Math.PI + 360) % 360;
+
+    const approachingFrom = getCompassDirection(bearingFromHome);
+
   if (currentDistanceMiles > CONFIG.maxDistanceMiles) {
     return null;
   }
@@ -151,7 +172,6 @@ function predictPass(plane, nowSeconds, settings) {
 
   const eastVelocity = speedMps * Math.sin(heading);
   const northVelocity = speedMps * Math.cos(heading);
-  const position = localCoordinates(lat, lon);
 
   // Bring the reported position forward to the present time.
   const effectiveAge = Math.max(0, ageSeconds);
@@ -231,7 +251,9 @@ function predictPass(plane, nowSeconds, settings) {
     lastContact,
     timePosition,
     positionAgeSeconds: ageSeconds,
-    headingChangeDegrees
+    headingChangeDegrees,
+    approachingFrom,
+    flyingTowards: getCompassDirection(track)
   };
 }
 

@@ -400,6 +400,18 @@ function render(data) {
       : "Unavailable"
   );
 
+  // Aircraft direction relative to home.
+  addMetric(
+    "Approaching from",
+    plane.approachingFrom || "Unavailable"
+  );
+
+  // Aircraft direction of travel.
+  addMetric(
+    "Flying towards",
+    plane.flyingTowards || "Unavailable"
+  );
+
   // Position age from OpenSky.
   if (plane.positionAgeSeconds != null) {
     const positionAge = Number(
