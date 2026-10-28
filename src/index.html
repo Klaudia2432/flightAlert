@@ -1,171 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Flight Alert</title>
-
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      width: 350px;
-      min-width: 350px;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: Arial, sans-serif;
-      width: 100%;
-      padding: 16px;
-      margin: 0;
-      color: #202124;
-      background: #ffffff;
-    }
-
-    h1 {
-      font-size: 21px;
-      margin: 0 0 6px;
-    }
-
-    .muted {
-      color: #666;
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    .status {
-      margin: 14px 0;
-      padding: 12px;
-      background: #f1f5f9;
-      border-radius: 8px;
-    }
-
-    #page-header {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-
-    #status-description {
-      margin-top: 4px;
-    }
-
-    .metric {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 7px 0;
-      border-bottom: 1px solid #e5e7eb;
-      font-size: 12px;
-    }
-
-    .metric:last-child {
-      border-bottom: 0;
-    }
-
-    .value {
-      font-weight: 600;
-      text-align: right;
-    }
-
-    button {
-      width: 100%;
-      padding: 10px;
-      border: 0;
-      border-radius: 7px;
-      background: #1d4ed8;
-      color: white;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    button:hover:not(:disabled) {
-      background: #1e40af;
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: wait;
-    }
-
-    #updated {
-      white-space: pre-line;
-    }
-
-    #error {
-      color: #b91c1c;
-      white-space: normal;
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    #updated {
-      margin: 0 0 14px;
-    }
-
-    .settings {
-      margin: 14px 0;
-      padding: 12px;
-      background: #f1f5f9;
-      border-radius: 8px;
-    }
-
-    .settings h2 {
-      font-size: 14px;
-      margin: 0 0 14px;
-    }
-
-    .setting-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
-      font-size: 12px;
-    }
-
-    .setting-row strong {
-      white-space: nowrap;
-    }
-
-    .settings input[type="range"] {
-      display: block;
-      width: 100%;
-      margin: 0;
-      cursor: pointer;
-      accent-color: #1d4ed8;
-    }
-
-    .range-labels {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 6px;
-      color: #666;
-      font-size: 11px;
-    }
-
-    .settings-note {
-      color: #666;
-      font-size: 11px;
-      line-height: 1.5;
-      margin: 12px 0 0;
-    }
-
-    #settings-status {
-      color: #166534;
-      font-size: 11px;
-      line-height: 1.5;
-    }
-
-    #settings-status:not(:empty) {
-      margin-top: 8px;
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
@@ -189,6 +28,46 @@
 
   <div class="settings">
     <h2>Your Preferences</h2>
+
+    <div class="home-settings">
+      <label class="home-label">
+        Home location
+      </label>
+
+      <div class="home-coordinates">
+        <div>
+          <label for="home-latitude">Latitude</label>
+          <input
+            type="number"
+            id="home-latitude"
+            min="-90"
+            max="90"
+            step="any"
+            placeholder="Latitude"
+          >
+        </div>
+
+        <div>
+          <label for="home-longitude">Longitude</label>
+          <input
+            type="number"
+            id="home-longitude"
+            min="-180"
+            max="180"
+            step="any"
+            placeholder="Longitude"
+          >
+        </div>
+      </div>
+
+      <p class="settings-note">
+        Enter the coordinates of the location you want to monitor.
+      </p>
+
+      <button id="save-home" type="button">
+        Save location
+      </button>
+    </div>
 
     <div class="setting-row">
       <label for="detection-radius">
@@ -224,6 +103,8 @@
     Check for aircraft
   </button>
 
+  <script src="config.js"></script>
   <script src="app.js"></script>
+  
 </body>
 </html>

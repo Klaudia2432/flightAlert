@@ -1,0 +1,207 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  width: 350px;
+  min-width: 350px;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  width: 100%;
+  padding: 16px;
+  margin: 0;
+  color: #202124;
+  background: #ffffff;
+}
+
+h1 {
+  font-size: 21px;
+  margin: 0 0 6px;
+}
+
+.muted {
+  color: #666;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.status {
+  margin: 14px 0;
+  padding: 12px;
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+#page-header {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+#status-description {
+  margin-top: 4px;
+}
+
+.metric {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 12px;
+}
+
+.metric:last-child {
+  border-bottom: 0;
+}
+
+.value {
+  font-weight: 600;
+  text-align: right;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 7px;
+  background: #1d4ed8;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #1e40af;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+#error {
+  color: #b91c1c;
+  white-space: normal;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+#updated {
+  white-space: pre-line;
+  margin: 0 0 14px;
+}
+
+.settings {
+  margin: 14px 0;
+  padding: 12px;
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+.settings h2 {
+  font-size: 14px;
+  margin: 0 0 14px;
+}
+
+.home-settings {
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #dce3eb;
+}
+
+.home-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.home-coordinates {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.home-coordinates > div {
+  min-width: 0;
+}
+
+.home-coordinates label {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+
+.home-coordinates input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #202124;
+  font-size: 12px;
+}
+
+.home-coordinates input:focus {
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
+}
+
+#save-home {
+  margin-top: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.setting-row strong {
+  white-space: nowrap;
+}
+
+.settings input[type="range"] {
+  display: block;
+  width: 100%;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #1d4ed8;
+}
+
+.range-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  color: #666;
+  font-size: 11px;
+}
+
+.settings-note {
+  color: #666;
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 12px 0 0;
+}
+
+#settings-status {
+  color: #166534;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+#settings-status:not(:empty) {
+  margin-top: 8px;
+}

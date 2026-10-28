@@ -1,3 +1,4 @@
+const { CONFIG } = globalThis.FLIGHT_ALERT_CONFIG;
 
 const header = document.getElementById("page-header");
 const details = document.getElementById("details");
@@ -9,6 +10,10 @@ const statusDescription = document.getElementById("status-description");
 const radiusSlider = document.getElementById("detection-radius");
 const radiusValue = document.getElementById("radius-value");
 const settingsStatus = document.getElementById("settings-status");
+
+const homeLatitude = document.getElementById("home-latitude");
+const homeLongitude = document.getElementById("home-longitude");
+const saveHomeButton = document.getElementById("save-home");
 
 let rateLimitTimer = null;
 let positionAgeTimer = null;
@@ -66,7 +71,7 @@ function startPositionAgeTimer(plane, checkedAt) {
     }
 
     // Hide aircraft predictions when position data becomes stale.
-    if (seconds > 90) {
+    if (seconds > CONFIG.staleAfterSeconds) {
       clearPositionAgeTimer();
 
       header.textContent = "Waiting for fresh aircraft data";
@@ -86,9 +91,12 @@ function startPositionAgeTimer(plane, checkedAt) {
 
   updateAge();
 
-  if (Date.now() - positionUpdatedAt <= 90 * 1000) {
-    positionAgeTimer = setInterval(updateAge, 1000);
-  }
+  if (
+    Date.now() - positionUpdatedAt <=
+    CONFIG.staleAfterSeconds * 1000
+  ) {
+      positionAgeTimer = setInterval(updateAge, 1000);
+    }
 }
 
 function addMetric(label, value) {
@@ -269,6 +277,17 @@ function render(data) {
   refreshButton.disabled = false;
   refreshButton.textContent = "Check for aircraft";
 
+  // Show first-run setup until a home location has been saved.
+  if (data?.requiresSetup) {
+    header.textContent = "Set your home location to get started";
+    statusDescription.textContent =
+      "Enter your latitude and longitude below, then click Save location.";
+    updated.textContent = "Flight monitoring has not started yet.";
+    refreshButton.disabled = true;
+    refreshButton.textContent = "Set home location first";
+    return;
+  }
+
   // Handle API and connection errors.
   if (!data || data.error) {
     header.textContent = "Unable to check flights";
@@ -313,19 +332,25 @@ function render(data) {
   startManualRefreshTimer(manualRefreshAvailableAt);
 
   if (data.statusMessage) {
-    header.textContent = "Waiting for flight updates";
+  header.textContent = "Waiting for flight updates";
 
-    statusDescription.textContent =
-      "Flight Alert will check for nearby aircraft automatically.";
+  statusDescription.textContent =
+    "Flight Alert will check for nearby aircraft automatically.";
 
-    updated.textContent = data.nextAllowedFetchAt
-      ? `Next automatic update available around ${
-          formatTime(data.nextAllowedFetchAt)
-        }. Click 'Check for aircraft' to refresh faster. Manual refresh is available every 1 minute.`
-      : "Waiting for new flight information.";
+  const manualRefreshSeconds =
+    CONFIG.manualRefreshIntervalMs / 1000;
 
-    return;
-  }
+  updated.textContent = data.nextAllowedFetchAt
+    ? `Next automatic update available around ${
+        formatTime(data.nextAllowedFetchAt)
+      }. Click 'Check for aircraft' to refresh faster. ` +
+      `Manual refresh is available every ${
+        manualRefreshSeconds
+      } seconds.`
+    : "Waiting for new flight information.";
+
+  return;
+}
 
   // Handle outdated aircraft positions.
   if (data.staleData) {
@@ -518,8 +543,19 @@ function loadSettings() {
         return;
       }
 
-      radiusSlider.value = response.radiusMiles;
-      updateRadiusLabel(response.radiusMiles);
+      const settings = response.settings || response;
+
+      radiusSlider.value = settings.radiusMiles;
+      updateRadiusLabel(settings.radiusMiles);
+
+      if (settings.home) {
+        homeLatitude.value = settings.home.lat;
+        homeLongitude.value = settings.home.lon;
+      } else {
+        homeLatitude.value = "";
+        homeLongitude.value = "";
+        render({ requiresSetup: true });
+      }
     }
   );
 }
@@ -571,6 +607,77 @@ function saveSettings() {
   );
 }
 
+// Save the user-selected home location.
+function saveHomeLocation() {
+  if (settingsSaving) {
+    return;
+  }
+
+  const latitudeText = homeLatitude.value.trim();
+  const longitudeText = homeLongitude.value.trim();
+
+  if (!latitudeText || !longitudeText) {
+    settingsStatus.textContent = "Please enter both coordinates.";
+    return;
+  }
+
+  const lat = Number(latitudeText);
+  const lon = Number(longitudeText);
+
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+    settingsStatus.textContent =
+      "Latitude must be between -90 and 90.";
+    return;
+  }
+
+  if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+    settingsStatus.textContent =
+      "Longitude must be between -180 and 180.";
+    return;
+  }
+
+  settingsSaving = true;
+  saveHomeButton.disabled = true;
+  radiusSlider.disabled = true;
+  settingsStatus.textContent = "Saving home location...";
+
+  chrome.runtime.sendMessage(
+    {
+      type: "SAVE_SETTINGS",
+      settings: { home: { lat, lon } }
+    },
+    (response) => {
+      const runtimeError = chrome.runtime.lastError;
+
+      settingsSaving = false;
+      saveHomeButton.disabled = false;
+      radiusSlider.disabled = false;
+
+      if (runtimeError || !response?.success) {
+        settingsStatus.textContent =
+          "Unable to save your home location.";
+
+        console.error(
+          "Unable to save home location:",
+          runtimeError?.message || response?.error
+        );
+
+        loadSettings();
+        return;
+      }
+
+      homeLatitude.value = response.settings.home.lat;
+      homeLongitude.value = response.settings.home.lon;
+
+      settingsStatus.textContent = response.homeChanged
+        ? "Home location updated. Waiting for fresh aircraft data."
+        : "Home location saved.";
+
+      refresh();
+    }
+  );
+}
+
 function refresh(forceRefresh = false) {
   if (isRefreshing || (forceRefresh && refreshButton.disabled)) {
     return;
@@ -607,7 +714,7 @@ function refresh(forceRefresh = false) {
         return;
       }
 
-      console.log("Flight Alert response:", data);
+      console.log("Flight Alert: Flight information received.");
       render(data);
     }
   );
@@ -622,6 +729,7 @@ radiusSlider.addEventListener("input", () => {
 });
 
 radiusSlider.addEventListener("change", saveSettings);
+saveHomeButton.addEventListener("click", saveHomeLocation);
 
 // Update the popup when background monitoring receives new flight data.
 function handleFlightStatusChange(changes, areaName) {

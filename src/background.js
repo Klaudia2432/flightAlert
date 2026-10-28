@@ -1,31 +1,20 @@
 
-const HOME = { lat: 55.7776, lon: -4.0536 };
+ // Load configuration before starting the background service worker.
+importScripts('config.js');
 
-const CONFIG = {
-  radiusMiles: 2,
-  maxDistanceMiles: 120,
-  predictionHorizonMinutes: 20,
-  alertMinMinutes: 10,
-  alertMaxMinutes: 20,
-  pollMinutes: 6,
-  staleAfterSeconds: 90,
-  alertCooldownMs: 45 * 60 * 1000,
-  maxDailyCredits: 300,
-  maxHeadingChangeDegrees: 20
-};
+// Restrict local storage access to trusted extension contexts.
+chrome.storage.local.setAccessLevel({
+  accessLevel: 'TRUSTED_CONTEXTS'
+}).catch(error => {
+  console.error('Unable to restrict local storage access:', error);
+});
 
-const ALARM_NAME = 'flight-alert-check';
-const ALERTS_KEY = 'notifiedAircraft';
-const RATE_LIMIT_KEY = 'rateLimitedUntil';
-const CACHE_KEY = 'lastFlightResult';
-const AIRCRAFT_CACHE_KEY = 'lastAircraftStates';
-const NEXT_FETCH_KEY = 'nextAllowedFetchAt';
-const BUDGET_KEY = 'dailyApiBudget';
-const SETTINGS_KEY = 'flightAlertSettings';
-const DEFAULT_RETRY_SECONDS = 15 * 60;
-const FETCH_INTERVAL_MS = CONFIG.pollMinutes * 60 * 1000;
-const LAST_FETCH_KEY = 'lastOpenSkyFetchAt';
-const MIN_MANUAL_INTERVAL_MS = 60 * 1000;
+const {
+  CONFIG, ALARM_NAME, LOCATION_ALARM_NAME, ALERTS_KEY, RATE_LIMIT_KEY,
+  CACHE_KEY, AIRCRAFT_CACHE_KEY, NEXT_FETCH_KEY, BUDGET_KEY, SETTINGS_KEY,
+  DEFAULT_RETRY_SECONDS, FETCH_INTERVAL_MS, LAST_FETCH_KEY,
+  MIN_MANUAL_INTERVAL_MS
+} = globalThis.FLIGHT_ALERT_CONFIG;
 
 let activeFetch = null;
 const aircraftHistory = new Map();
@@ -58,11 +47,11 @@ function getBoundingBox(lat, lon, radiusMiles) {
   };
 }
 
-function localCoordinates(lat, lon) {
+function localCoordinates(lat, lon, home) {
   return {
-    north: radians(lat - HOME.lat) * 6371,
-    east: radians(lon - HOME.lon) * 6371 *
-      Math.cos(radians(HOME.lat))
+    north: radians(lat - home.lat) * 6371,
+    east: radians(lon - home.lon) * 6371 *
+      Math.cos(radians(home.lat))
   };
 }
 
@@ -94,16 +83,40 @@ function validateRadius(radius) {
   return value;
 }
 
+// Validate the user-selected home coordinates.
+function validateHome(home) {
+  if (!home || typeof home !== 'object') {
+    throw new Error('Home location is required');
+  }
+
+  const lat = Number(home.lat);
+  const lon = Number(home.lon);
+
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+    throw new Error('Latitude must be between -90 and 90');
+  }
+
+  if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+    throw new Error('Longitude must be between -180 and 180');
+  }
+
+  return { lat, lon };
+}
+
 // Load saved settings or use defaults.
 async function getSettings() {
   const stored = await chrome.storage.local.get(SETTINGS_KEY);
 
-  const radiusMiles = stored[SETTINGS_KEY]?.radiusMiles;
+  const savedSettings = stored[SETTINGS_KEY] || {};
+  const radiusMiles = savedSettings.radiusMiles;
 
   return {
     radiusMiles: radiusMiles == null
       ? CONFIG.radiusMiles
       : validateRadius(radiusMiles),
+    home: savedSettings.home == null
+      ? null
+      : validateHome(savedSettings.home),
     predictionHorizonMinutes: CONFIG.predictionHorizonMinutes
   };
 }
@@ -153,10 +166,15 @@ function predictPass(plane, nowSeconds, settings) {
   }
 
   const currentDistanceMiles =
-    distanceKm(HOME.lat, HOME.lon, lat, lon) * 0.621371;
+    distanceKm(
+      settings.home.lat,
+      settings.home.lon,
+      lat,
+      lon
+    ) * 0.621371;
 
-    // Calculate the direction of the aircraft relative to home.
-    const position = localCoordinates(lat, lon);
+  // Calculate the direction of the aircraft relative to home.
+  const position = localCoordinates(lat, lon, settings.home);
 
   if (currentDistanceMiles > CONFIG.maxDistanceMiles) {
     return null;
@@ -435,6 +453,15 @@ async function fetchNearbyAircraft(forceRefresh = false) {
 
   activeFetch = (async () => {
     const settings = await getSettings();
+
+    // Do not monitor aircraft until the user configures a home location.
+    if (!settings.home) {
+      return statusResult('Home location setup required', {
+        requiresSetup: true,
+        settings
+      });
+    }
+
     const rateLimit = await getRateLimitStatus();
 
     if (rateLimit) {
@@ -484,44 +511,44 @@ async function fetchNearbyAircraft(forceRefresh = false) {
         const elapsedMinutes =
           (now - cached.checkedAt) / 60000;
 
-    // Exclude predictions based on stale aircraft positions.
-    let stalePredictionsCount = 0;
+        // Exclude predictions based on stale aircraft positions.
+        let stalePredictionsCount = 0;
 
-    const predictions = (cached.predictions || [])
-    .map(plane => ({
-        ...plane,
-        etaMinutes: plane.etaMinutes - elapsedMinutes
-    }))
-    .filter(plane => {
-        const positionAgeSeconds =
-        (now / 1000) - Number(plane.timePosition);
+        const predictions = (cached.predictions || [])
+          .map(plane => ({
+            ...plane,
+            etaMinutes: plane.etaMinutes - elapsedMinutes
+          }))
+          .filter(plane => {
+            const positionAgeSeconds =
+              (now / 1000) - Number(plane.timePosition);
 
-        const isStale =
-        !Number.isFinite(positionAgeSeconds) ||
-        positionAgeSeconds > CONFIG.staleAfterSeconds;
+            const isStale =
+              !Number.isFinite(positionAgeSeconds) ||
+              positionAgeSeconds > CONFIG.staleAfterSeconds;
 
-        if (isStale) {
-        stalePredictionsCount++;
-        }
+            if (isStale) {
+              stalePredictionsCount++;
+            }
 
-        return (
-        plane.etaMinutes > 0 &&
-        Number.isFinite(positionAgeSeconds) &&
-        positionAgeSeconds >= -30 &&
-        positionAgeSeconds <= CONFIG.staleAfterSeconds
-        );
-    });
+            return (
+              plane.etaMinutes > 0 &&
+              Number.isFinite(positionAgeSeconds) &&
+              positionAgeSeconds >= -30 &&
+              positionAgeSeconds <= CONFIG.staleAfterSeconds
+            );
+          });
 
         return {
-        ...cached,
-        predictions,
-        plane: predictions[0] || null,
-        staleData:
+          ...cached,
+          predictions,
+          plane: predictions[0] || null,
+          staleData:
             predictions.length === 0 && stalePredictionsCount > 0,
-        cached: true,
-        nextAllowedFetchAt,
-        manualRefreshAvailableAt,
-        settings
+          cached: true,
+          nextAllowedFetchAt,
+          manualRefreshAvailableAt,
+          settings
         };
       }
 
@@ -535,8 +562,8 @@ async function fetchNearbyAircraft(forceRefresh = false) {
 
     // Dynamically calculate the geographic search area.
     const bounds = getBoundingBox(
-      HOME.lat,
-      HOME.lon,
+      settings.home.lat,
+      settings.home.lon,
       CONFIG.maxDistanceMiles
     );
 
@@ -636,7 +663,7 @@ async function fetchNearbyAircraft(forceRefresh = false) {
       latestFlightStatus: result
     });
 
-    console.log('Flight Alert:', result);
+    console.log('Flight Alert: Aircraft data updated successfully.');
 
     return result;
   })();
@@ -710,6 +737,7 @@ async function checkFlights() {
   const result = await fetchNearbyAircraft();
 
   if (
+    result.requiresSetup ||
     result.rateLimited ||
     result.budgetLimited ||
     result.error ||
@@ -747,6 +775,29 @@ async function runCheckSafely() {
   }
 }
 
+// Check the new location as soon as the existing API limits allow.
+async function scheduleLocationCheck() {
+  const stored = await chrome.storage.local.get([
+    NEXT_FETCH_KEY,
+    RATE_LIMIT_KEY
+  ]);
+
+  const nextFetchAt = Number(stored[NEXT_FETCH_KEY]) || 0;
+  const rateLimitedUntil = Number(stored[RATE_LIMIT_KEY]) || 0;
+  const allowedAt = Math.max(nextFetchAt, rateLimitedUntil);
+
+  await chrome.alarms.clear(LOCATION_ALARM_NAME);
+
+  if (allowedAt <= Date.now()) {
+    void runCheckSafely();
+    return;
+  }
+
+  await chrome.alarms.create(LOCATION_ALARM_NAME, {
+    when: allowedAt
+  });
+}
+
 async function ensureAlarm() {
   const alarm = await chrome.alarms.get(ALARM_NAME);
 
@@ -771,13 +822,21 @@ chrome.runtime.onStartup.addListener(() => {
 });
 
 chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name === ALARM_NAME) {
+  if (
+    alarm.name === ALARM_NAME ||
+    alarm.name === LOCATION_ALARM_NAME
+  ) {
     void runCheckSafely();
   }
 });
 
 chrome.runtime.onMessage.addListener(
   (request, sender, sendResponse) => {
+
+    // Accept messages only from this extension.
+    if (sender.id !== chrome.runtime.id) {
+      return false;
+    }
 
     // Return the current detection settings.
     if (request.type === 'GET_SETTINGS') {
@@ -793,9 +852,24 @@ chrome.runtime.onMessage.addListener(
     // Save the radius and recalculate cached predictions.
     if (request.type === 'SAVE_SETTINGS') {
       (async () => {
-        const radiusMiles = validateRadius(
-          request.settings?.radiusMiles
-        );
+        const currentSettings = await getSettings();
+
+        const radiusMiles = request.settings?.radiusMiles == null
+          ? currentSettings.radiusMiles
+          : validateRadius(request.settings.radiusMiles);
+
+        const home = request.settings?.home == null
+          ? currentSettings.home
+          : validateHome(request.settings.home);
+
+        if (!home) {
+          throw new Error('Please configure your home location first');
+        }
+
+        const homeChanged =
+          !currentSettings.home ||
+          home.lat !== currentSettings.home.lat ||
+          home.lon !== currentSettings.home.lon;
 
         if (activeFetch) {
           try {
@@ -809,16 +883,30 @@ chrome.runtime.onMessage.addListener(
         }
 
         await chrome.storage.local.set({
-          [SETTINGS_KEY]: { radiusMiles }
+          [SETTINGS_KEY]: { radiusMiles, home }
         });
 
         const settings = await getSettings();
 
-        await recalculateCachedPredictions(settings);
+        if (homeChanged) {
+          // Clear aircraft data belonging to the previous location.
+          await chrome.storage.local.remove([
+            CACHE_KEY,
+            AIRCRAFT_CACHE_KEY,
+            'latestFlightStatus',
+            ALERTS_KEY
+          ]);
+
+          aircraftHistory.clear();
+          await scheduleLocationCheck();
+        } else {
+          await recalculateCachedPredictions(settings);
+        }
 
         sendResponse({
           success: true,
-          settings
+          settings,
+          homeChanged
         });
       })().catch(error => {
         sendResponse({ error: error.message });
