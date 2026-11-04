@@ -17,11 +17,18 @@ const saveHomeButton = document.getElementById("save-home");
 const detectLocationButton = document.getElementById("detect-location");
 const locationAccuracy = document.getElementById("location-accuracy");
 
+const aircraftTab = document.getElementById("aircraft-tab");
+const settingsTab = document.getElementById("settings-tab");
+
+const aircraftPanel = document.getElementById("aircraft-panel");
+const settingsPanel = document.getElementById("settings-panel");
+
 let rateLimitTimer = null;
 let positionAgeTimer = null;
 let manualRefreshTimer = null;
 let settingsSaving = false;
 let isRefreshing = false;
+let detectedLocationAccuracyMiles = null;
 let manualRefreshAvailableAt = 0;
 let refreshBlockedByRateLimit = false;
 let refreshBlockedByBudget = false;
@@ -281,24 +288,31 @@ function render(data) {
 
   // Show first-run setup until a home location has been saved.
   if (data?.requiresSetup) {
-    header.textContent = "Set your home location to get started";
+    header.textContent = "Set up your home location";
+
     statusDescription.textContent =
-      "Enter your latitude and longitude below, then click Save location.";
+      "Open Settings to detect your current location or " +
+      "enter coordinates manually to start monitoring aircraft.";
+
     updated.textContent = "Flight monitoring has not started yet.";
+
     refreshButton.disabled = true;
     refreshButton.textContent = "Set home location first";
+
     return;
   }
 
   // Handle API and connection errors.
   if (!data || data.error) {
-    header.textContent = "Unable to check flights";
+    header.textContent = "Flight data temporarily unavailable";
 
     statusDescription.textContent =
-      "Something went wrong while checking for nearby aircraft.";
+      "Unable to retrieve aircraft information from OpenSky. " +
+      "Your settings are safe, and Flight Alert will try again " +
+      "during the next scheduled check.";
 
     updated.textContent =
-      "Please try again later.";
+      "Check your internet connection or try again later.";
 
     if (data?.error) {
       console.error("Flight Alert:", data.error);
@@ -360,7 +374,7 @@ function render(data) {
 
     statusDescription.textContent =
       "Previously detected aircraft positions are outdated. " +
-      "Flight Alert will check again automatically.";
+      "Flight Alert will automatically check for new aircraft data.";
 
     updated.textContent = data.nextAllowedFetchAt
       ? `Next automatic update around ${
@@ -381,11 +395,11 @@ function render(data) {
     statusDescription.textContent =
       `No aircraft is currently predicted to fly within ` +
       `${radius} ${radius === 1 ? "mile" : "miles"} ` +
-      `of your home.`;
+      `of your home. Monitoring continues automatically.`;
 
     if (data.checkedAt) {
       updated.textContent =
-        `Last updated at ${formatTime(data.checkedAt)}`;
+        `Last checked at ${formatTime(data.checkedAt)}`;
     } else {
       updated.textContent = "Waiting for flight information.";
     }
@@ -553,10 +567,16 @@ function loadSettings() {
       if (settings.home) {
         homeLatitude.value = settings.home.lat;
         homeLongitude.value = settings.home.lon;
+        homeLatitude.dataset.locationConfigured = "true";
       } else {
+        delete homeLatitude.dataset.locationConfigured;
+
         homeLatitude.value = "";
         homeLongitude.value = "";
         render({ requiresSetup: true });
+
+        // Open settings automatically on first launch.
+        switchTab("settings");
       }
     }
   );
@@ -569,6 +589,9 @@ function saveSettings() {
   }
 
   const radiusMiles = Number(radiusSlider.value);
+
+  // Remember whether the user is completing their initial setup.
+  const isFirstLocationSetup = !homeLatitude.dataset.locationConfigured;
 
   settingsSaving = true;
   radiusSlider.disabled = true;
@@ -638,6 +661,10 @@ function saveHomeLocation() {
     return;
   }
 
+  // Remember whether the user is completing their initial setup.
+  const isFirstLocationSetup =
+    !homeLatitude.dataset.locationConfigured;
+
   settingsSaving = true;
   saveHomeButton.disabled = true;
   radiusSlider.disabled = true;
@@ -675,6 +702,11 @@ function saveHomeLocation() {
         ? "Home location updated. Waiting for fresh aircraft data."
         : "Home location saved.";
 
+      // Switch to Aircraft only after the first successful location setup.
+      if (isFirstLocationSetup) {
+        switchTab("aircraft");
+      }
+
       refresh();
     }
   );
@@ -704,11 +736,9 @@ function detectCurrentLocation() {
     homeLatitude.value = latitude.toFixed(6);
     homeLongitude.value = longitude.toFixed(6);
 
-    // Display the estimated accuracy of the detected location in miles.
-    const accuracyMiles = accuracy / 1609.344;
-
-    locationAccuracy.textContent =
-      `Estimated location accuracy: ±${accuracyMiles.toFixed(2)} mi`;
+      // Store the estimated accuracy of the detected location in miles.
+      detectedLocationAccuracyMiles = accuracy / 1609.344;
+      updateLocationAccuracy();
 
       detectLocationButton.disabled = false;
       detectLocationButton.textContent = "Use my current location";
@@ -721,7 +751,8 @@ function detectCurrentLocation() {
       detectLocationButton.textContent = "Use my current location";
 
       // Clear location accuracy if location detection fails.
-      locationAccuracy.textContent = "";
+      detectedLocationAccuracyMiles = null;
+      updateLocationAccuracy();
 
       switch (error.code) {
         case 1:
@@ -750,6 +781,32 @@ function detectCurrentLocation() {
       maximumAge: 0
     }
   );
+}
+
+// Display location accuracy and warn when it exceeds the detection radius.
+function updateLocationAccuracy() {
+  if (detectedLocationAccuracyMiles === null) {
+    locationAccuracy.textContent = "";
+    locationAccuracy.classList.remove("accuracy-warning");
+    return;
+  }
+
+  const radiusMiles = Number(radiusSlider.value);
+  const accuracyMiles = detectedLocationAccuracyMiles;
+
+  if (accuracyMiles > radiusMiles) {
+    locationAccuracy.textContent =
+      `⚠️ Location accuracy (±${accuracyMiles.toFixed(2)} mi) ` +
+      `exceeds your detection radius (${radiusMiles} mi). ` +
+      `Consider entering your coordinates manually.`;
+
+    locationAccuracy.classList.add("accuracy-warning");
+  } else {
+    locationAccuracy.textContent =
+      `Estimated location accuracy: ±${accuracyMiles.toFixed(2)} mi`;
+
+    locationAccuracy.classList.remove("accuracy-warning");
+  }
 }
 
 function refresh(forceRefresh = false) {
@@ -800,19 +857,44 @@ refreshButton.addEventListener("click", () => {
 
 radiusSlider.addEventListener("input", () => {
   updateRadiusLabel(radiusSlider.value);
+  updateLocationAccuracy();
+});
+
+// Switch between aircraft information and user settings.
+function switchTab(tab) {
+  const showAircraft = tab === "aircraft";
+
+  aircraftPanel.hidden = !showAircraft;
+  settingsPanel.hidden = showAircraft;
+
+  aircraftTab.classList.toggle("active", showAircraft);
+  settingsTab.classList.toggle("active", !showAircraft);
+
+  aircraftTab.setAttribute("aria-selected", String(showAircraft));
+  settingsTab.setAttribute("aria-selected", String(!showAircraft));
+}
+
+aircraftTab.addEventListener("click", () => {
+  switchTab("aircraft");
+});
+
+settingsTab.addEventListener("click", () => {
+  switchTab("settings");
 });
 
 radiusSlider.addEventListener("change", saveSettings);
 saveHomeButton.addEventListener("click", saveHomeLocation);
 detectLocationButton.addEventListener("click", detectCurrentLocation);
 
-// Clear location accuracy when coordinates are edited manually.
+// Clear detected accuracy when coordinates are edited manually.
 homeLatitude.addEventListener("input", () => {
-  locationAccuracy.textContent = "";
+  detectedLocationAccuracyMiles = null;
+  updateLocationAccuracy();
 });
 
 homeLongitude.addEventListener("input", () => {
-  locationAccuracy.textContent = "";
+  detectedLocationAccuracyMiles = null;
+  updateLocationAccuracy();
 });
 
 // Update the popup when background monitoring receives new flight data.

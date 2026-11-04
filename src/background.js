@@ -34,25 +34,76 @@ function distanceKm(lat1, lon1, lat2, lon2) {
   );
 }
 
-function getBoundingBox(lat, lon, radiusMiles) {
-  const latOffset = radiusMiles / 69;
-  const lonOffset = radiusMiles /
-    (69 * Math.max(0.01, Math.cos(radians(lat))));
+// Normalize longitude differences across the international date line.
+function longitudeDifference(fromLon, toLon) {
+  return ((toLon - fromLon + 540) % 360) - 180;
+}
+
+// Return one or two valid OpenSky bounding boxes for a circular search area.
+function getBoundingBoxes(lat, lon, radiusMiles) {
+  const angularRadius = radiusMiles / 3958.7613;
+  const latOffset = angularRadius * 180 / Math.PI;
+  const lamin = Math.max(-90, lat - latOffset);
+  const lamax = Math.min(90, lat + latOffset);
+
+  // A search area touching a pole spans all longitudes.
+  if (lamin <= -90 || lamax >= 90) {
+    return [{ lamin, lomin: -180, lamax, lomax: 180 }];
+  }
+
+  const lonOffset = Math.asin(Math.min(
+    1,
+    Math.sin(angularRadius) / Math.cos(radians(lat))
+  )) * 180 / Math.PI;
+
+  // Represent the centre in [-180, 180) for consistent splitting.
+  const centreLon = ((lon + 180) % 360 + 360) % 360 - 180;
+  const left = centreLon - lonOffset;
+  const right = centreLon + lonOffset;
+
+  if (left < -180) {
+    return [
+      { lamin, lomin: left + 360, lamax, lomax: 180 },
+      { lamin, lomin: -180, lamax, lomax: right }
+    ];
+  }
+
+  if (right > 180) {
+    return [
+      { lamin, lomin: left, lamax, lomax: 180 },
+      { lamin, lomin: -180, lamax, lomax: right - 360 }
+    ];
+  }
+
+  return [{ lamin, lomin: left, lamax, lomax: right }];
+}
+
+// Calculate local north/east offsets using great-circle distance and bearing.
+function localCoordinates(lat, lon, home) {
+  const lat1 = radians(home.lat);
+  const lat2 = radians(lat);
+  const deltaLon = radians(longitudeDifference(home.lon, lon));
+  const bearing = Math.atan2(
+    Math.sin(deltaLon) * Math.cos(lat2),
+    Math.cos(lat1) * Math.sin(lat2) -
+      Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon)
+  );
+  const distance = distanceKm(home.lat, home.lon, lat, lon);
 
   return {
-    lamin: Math.max(-90, lat - latOffset),
-    lomin: Math.max(-180, lon - lonOffset),
-    lamax: Math.min(90, lat + latOffset),
-    lomax: Math.min(180, lon + lonOffset)
+    north: distance * Math.cos(bearing),
+    east: distance * Math.sin(bearing)
   };
 }
 
-function localCoordinates(lat, lon, home) {
-  return {
-    north: radians(lat - home.lat) * 6371,
-    east: radians(lon - home.lon) * 6371 *
-      Math.cos(radians(home.lat))
-  };
+// Estimate the OpenSky credit cost of one bounding-box request.
+function getRequestCredits(bounds) {
+  const area = (bounds.lamax - bounds.lamin) *
+    (bounds.lomax - bounds.lomin);
+
+  return area <= 25 ? 1 :
+    area <= 100 ? 2 :
+    area <= 400 ? 3 : 4;
 }
 
 function headingDifference(a, b) {
@@ -561,20 +612,17 @@ async function fetchNearbyAircraft(forceRefresh = false) {
     }
 
     // Dynamically calculate the geographic search area.
-    const bounds = getBoundingBox(
+    const boundsList = getBoundingBoxes(
       settings.home.lat,
       settings.home.lon,
       CONFIG.maxDistanceMiles
     );
 
-    const area =
-      (bounds.lamax - bounds.lamin) *
-      (bounds.lomax - bounds.lomin);
-
-    const requestCredits =
-      area <= 25 ? 1 :
-      area <= 100 ? 2 :
-      area <= 400 ? 3 : 4;
+    // Reserve the combined cost before making any OpenSky requests.
+    const requestCredits = boundsList.reduce(
+      (total, bounds) => total + getRequestCredits(bounds),
+      0
+    );
 
     // Protect the locally allocated daily API budget.
     if (
@@ -599,40 +647,62 @@ async function fetchNearbyAircraft(forceRefresh = false) {
       }
     });
 
-    const url = new URL(
-      'https://opensky-network.org/api/states/all'
-    );
+    const statesByAircraft = new Map();
 
-    url.search = new URLSearchParams(bounds).toString();
-
-    const response = await fetch(url, {
-      headers: {
-        Accept: 'application/json'
-      },
-      signal: AbortSignal.timeout(15000)
-    });
-
-    if (response.status === 429) {
-      return await saveRateLimit(response);
-    }
-
-    if (!response.ok) {
-      throw new Error(`OpenSky HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (
-      data.states != null &&
-      !Array.isArray(data.states)
-    ) {
-      throw new Error(
-        'OpenSky returned an invalid states array'
+    // Search each box separately when the area crosses the date line.
+    for (const bounds of boundsList) {
+      const url = new URL(
+        'https://opensky-network.org/api/states/all'
       );
+
+      url.search = new URLSearchParams(bounds).toString();
+
+      const response = await fetch(url, {
+        headers: {
+          Accept: 'application/json'
+        },
+        signal: AbortSignal.timeout(15000)
+      });
+
+      if (response.status === 429) {
+        return await saveRateLimit(response);
+      }
+
+      if (!response.ok) {
+        throw new Error(`OpenSky HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (
+        data.states != null &&
+        !Array.isArray(data.states)
+      ) {
+        throw new Error(
+          'OpenSky returned an invalid states array'
+        );
+      }
+
+      for (const plane of data.states || []) {
+        const icao24 = plane?.[0];
+
+        if (!icao24) {
+          continue;
+        }
+
+        const previous = statesByAircraft.get(icao24);
+
+        if (
+          !previous ||
+          (plane[3] || 0) > (previous[3] || 0)
+        ) {
+          statesByAircraft.set(icao24, plane);
+        }
+      }
     }
 
     const nowSeconds = Date.now() / 1000;
-    const states = data.states || [];
+    const states = [...statesByAircraft.values()];
 
     const predictions = states
       .map(plane => predictPass(plane, nowSeconds, settings))

@@ -1,116 +1,198 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
   <title>Flight Alert</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-  <h1>✈ Flight Alert</h1>
+  <main class="container">
 
-  <div class="muted">
-    Know when aircraft are flying near your home
-  </div>
+    <!-- Extension header -->
+    <header class="header">
+      <h1>✈ Flight Alert</h1>
+      <p>Know when aircraft are flying near your home</p>
+    </header>
 
-  <div class="status">
-    <div id="page-header">Checking for aircraft...</div>
-    <div id="status-description" class="muted"></div>
-    <div id="details"></div>
-  </div>
-
-  <div id="error" role="status"></div>
-
-  <p class="muted" id="updated">
-    Waiting for flight data...
-  </p>
-
-  <div class="settings">
-    <h2>Your Preferences</h2>
-
-    <div class="home-settings">
-      <label class="home-label">
-        Home location
-      </label>
-
-      <div class="home-coordinates">
-        <div>
-          <label for="home-latitude">Latitude</label>
-          <input
-            type="number"
-            id="home-latitude"
-            min="-90"
-            max="90"
-            step="any"
-            placeholder="Latitude"
-          >
-        </div>
-
-        <div>
-          <label for="home-longitude">Longitude</label>
-          <input
-            type="number"
-            id="home-longitude"
-            min="-180"
-            max="180"
-            step="any"
-            placeholder="Longitude"
-          >
-        </div>
-      </div>
-
-      <p class="settings-note">
-        Enter the coordinates of the location you want to monitor.
-      </p>
-
-      <button id="save-home" type="button">
-        Save location
-      </button>
-
-      <button id="detect-location" type="button">
-        Use my current location
-      </button>
-
-      <p id="location-accuracy"></p>
-    </div>
-
-    <div class="setting-row">
-      <label for="detection-radius">
-        How close to your home?
-      </label>
-
-      <strong id="radius-value">2 miles</strong>
-    </div>
-
-    <input
-      type="range"
-      id="detection-radius"
-      min="1"
-      max="20"
-      step="1"
-      value="2"
+    <!-- Popup navigation -->
+    <nav
+      class="tab-navigation"
+      role="tablist"
+      aria-label="Flight Alert sections"
     >
+      <button
+        id="aircraft-tab"
+        class="tab-button active"
+        type="button"
+        role="tab"
+        aria-selected="true"
+        aria-controls="aircraft-panel"
+        tabindex="0"
+      >
+        Aircraft
+      </button>
 
-    <div class="range-labels">
-      <span>1 mi</span>
-      <span>20 mi</span>
-    </div>
+      <button
+        id="settings-tab"
+        class="tab-button"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="settings-panel"
+        tabindex="-1"
+      >
+        Settings
+      </button>
+    </nav>
 
-    <p class="settings-note">
-      We'll alert you when an aircraft is expected
-      to fly within this distance of your home.
-    </p>
+    <!-- Aircraft information tab -->
+    <section
+      id="aircraft-panel"
+      role="tabpanel"
+      aria-labelledby="aircraft-tab"
+    >
+      <section class="card">
+        <h2 id="page-header">Checking for aircraft...</h2>
 
-    <div id="settings-status" role="status"></div>
-  </div>
+        <p id="status-description"></p>
 
-  <button id="refresh" type="button">
-    Check for aircraft
-  </button>
+        <div id="error"></div>
 
+        <div id="details"></div>
+      </section>
+
+      <p id="updated"></p>
+
+      <button
+        id="refresh"
+        type="button"
+      >
+        Check for aircraft
+      </button>
+    </section>
+
+    <!-- User settings tab -->
+    <section
+      id="settings-panel"
+      role="tabpanel"
+      aria-labelledby="settings-tab"
+      hidden
+    >
+      <section class="card">
+        <h2>Your Preferences</h2>
+
+        <!-- Home location settings -->
+        <div class="settings-section">
+          <h3>Home Location</h3>
+
+          <div class="coordinates">
+            <div class="coordinate-field">
+              <label for="home-latitude">
+                Latitude
+              </label>
+
+              <input
+                id="home-latitude"
+                type="number"
+                step="any"
+                min="-90"
+                max="90"
+                placeholder="Latitude"
+              >
+            </div>
+
+            <div class="coordinate-field">
+              <label for="home-longitude">
+                Longitude
+              </label>
+
+              <input
+                id="home-longitude"
+                type="number"
+                step="any"
+                min="-180"
+                max="180"
+                placeholder="Longitude"
+              >
+            </div>
+          </div>
+
+          <p class="settings-description">
+            Enter the coordinates of the location
+            you want to monitor.
+          </p>
+
+          <button
+            id="save-home"
+            type="button"
+          >
+            Save location
+          </button>
+
+          <!-- Automatic location detection -->
+          <button
+            id="detect-location"
+            type="button"
+          >
+            Use my current location
+          </button>
+
+          <!-- Detected location accuracy -->
+          <p
+            id="location-accuracy"
+            aria-live="polite"
+          ></p>
+
+          <!-- Settings status messages -->
+          <p
+            id="settings-status"
+            aria-live="polite"
+          ></p>
+        </div>
+
+        <!-- Detection radius settings -->
+        <div class="settings-section">
+          <div class="radius-header">
+            <label for="detection-radius">
+              How close to your home?
+            </label>
+
+            <strong id="radius-value">2 miles</strong>
+          </div>
+
+          <input
+            id="detection-radius"
+            type="range"
+            min="1"
+            max="20"
+            step="1"
+            value="2"
+          >
+
+          <div class="radius-limits">
+            <span>1 mi</span>
+            <span>20 mi</span>
+          </div>
+
+          <p class="settings-description">
+            We'll alert you when an aircraft is
+            expected to fly within this distance
+            of your home.
+          </p>
+        </div>
+      </section>
+    </section>
+
+  </main>
+
+  <!-- Shared configuration must load before app.js -->
   <script src="config.js"></script>
   <script src="app.js"></script>
-
 </body>
 </html>
