@@ -1,0 +1,32 @@
+:root {
+  /* Colours */
+  --color-background: #efd5c4;
+  --color-surface: #f1f5f9;
+  --color-primary: #ff8c00;
+
+  --color-text: #202124;
+  --color-muted: #666;
+  --color-muted-secondary: #64748b;
+
+  --color-border: #e5e7eb;
+  --color-border-strong: #dce3eb;
+  --color-input-border: #d1d5db;
+
+  --color-white: #ffffff;
+  --color-error: #b91c1c;
+  --color-success: #166534;
+  --color-warning: #b45309;
+
+  --color-warning-background: #fff7ed;
+  --color-warning-border: #fed7aa;
+
+  --color-hover: #e2e8f0;
+  --color-focus: #93c5fd;
+
+  /* Layout */
+  --popup-width: 350px;
+
+  --radius-card: 8px;
+  --radius-button: 7px;
+  --radius-input: 6px;
+}

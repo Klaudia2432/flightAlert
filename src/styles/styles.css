@@ -3,8 +3,8 @@
 }
 
 html {
-  width: 350px;
-  min-width: 350px;
+  width: var(--popup-width);
+  min-width: var(--popup-width);
   margin: 0;
   padding: 0;
 }
@@ -14,8 +14,8 @@ body {
   width: 100%;
   padding: 16px;
   margin: 0;
-  color: #202124;
-  background: #efd5c4;
+  color: var(--color-text);
+  background: var(--color-background);
 }
 
 h1 {
@@ -24,24 +24,22 @@ h1 {
 }
 
 .muted {
-  color: #666;
+  color: var(--color-muted);
   font-size: 12px;
   line-height: 1.5;
 }
 
-/* Extension header */
 .header {
   margin-bottom: 16px;
 }
 
 .header p {
-  color: #666;
+  color: var(--color-muted);
   font-size: 12px;
   line-height: 1.5;
   margin: 0;
 }
 
-/* Tab navigation */
 .tab-navigation {
   display: flex;
   gap: 8px;
@@ -54,9 +52,9 @@ h1 {
   margin: 0;
   padding: 10px 12px;
   border: 0;
-  border-radius: 8px;
-  background: #f1f5f9;
-  color: #666;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-muted);
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
@@ -64,48 +62,46 @@ h1 {
 }
 
 .tab-button.active {
-  background: #ff8c00;
-  color: #ffffff;
+  background: var(--color-primary);
+  color: var(--color-white);
 }
 
 .tab-button:hover:not(:disabled):not(.active) {
-  background: #e2e8f0;
+  background: var(--color-hover);
 }
 
 .tab-button:hover:not(:disabled).active {
-  background: #ff8c00;
+  background: var(--color-primary);
 }
 
 .tab-button:focus-visible {
-  outline: 2px solid #93c5fd;
+  outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
 
-/* Hide inactive tabs */
 [hidden] {
   display: none !important;
 }
 
-/* Aircraft information card */
-.status,
-#aircraft-panel .card {
+.card {
   margin: 14px 0;
   padding: 12px;
-  background: #f1f5f9;
-  border-radius: 8px;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
 }
 
 #page-header {
   font-size: 14px;
   font-weight: 600;
+  line-height: 1.4;
   margin: 0 0 4px;
 }
 
 #status-description {
-  margin-top: 4px;
-  color: #666;
+  margin: 8px 0 0;
+  color: var(--color-muted-secondary);
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .metric {
@@ -113,7 +109,7 @@ h1 {
   justify-content: space-between;
   gap: 12px;
   padding: 7px 0;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   font-size: 12px;
 }
 
@@ -132,15 +128,15 @@ button {
   padding: 10px;
   margin: 10px 0;
   border: 0;
-  border-radius: 7px;
-  background: #ff8c00;
-  color: white;
+  border-radius: var(--radius-button);
+  background: var(--color-primary);
+  color: var(--color-white);
   font-weight: 600;
   cursor: pointer;
 }
 
 button:hover:not(:disabled) {
-  background: #ff8c00;
+  background: var(--color-primary);
 }
 
 button:disabled {
@@ -150,7 +146,7 @@ button:disabled {
 
 /* Errors and last update */
 #error {
-  color: #b91c1c;
+  color: var(--color-error);
   white-space: normal;
   font-size: 12px;
   line-height: 1.5;
@@ -159,35 +155,24 @@ button:disabled {
 #updated {
   white-space: pre-line;
   margin: 0 0 14px;
-  color: #666;
-  font-size: 12px;
+  color: var(--color-muted-secondary);
+  font-size: 11px;
   line-height: 1.5;
 }
 
-/* Settings card */
-.settings,
-#settings-panel .card {
-  margin: 14px 0;
-  padding: 12px;
-  background: #f1f5f9;
-  border-radius: 8px;
-}
-
-.settings h2,
+/* Settings */
 #settings-panel .card h2 {
   font-size: 14px;
   margin: 0 0 14px;
 }
 
 /* Home location settings */
-.home-settings,
 #settings-panel .settings-section:first-of-type {
   margin-bottom: 18px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #dce3eb;
+  border-bottom: 1px solid var(--color-border-strong);
 }
 
-.home-label,
 #settings-panel .settings-section h3 {
   display: block;
   font-size: 12px;
@@ -196,42 +181,37 @@ button:disabled {
 }
 
 /* Coordinate inputs */
-.home-coordinates,
 #settings-panel .coordinates {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
 }
 
-.home-coordinates > div,
 #settings-panel .coordinate-field {
   min-width: 0;
 }
 
-.home-coordinates label,
 #settings-panel .coordinate-field label {
   display: block;
   font-size: 11px;
   margin-bottom: 5px;
 }
 
-.home-coordinates input,
 #settings-panel .coordinate-field input {
   display: block;
   width: 100%;
   min-width: 0;
   padding: 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #202124;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-input);
+  background: var(--color-white);
+  color: var(--color-text);
   font-family: inherit;
   font-size: 12px;
 }
 
-.home-coordinates input:focus,
 #settings-panel .coordinate-field input:focus {
-  outline: 2px solid #93c5fd;
+  outline: 2px solid var(--color-focus);
   outline-offset: 1px;
 }
 
@@ -250,7 +230,7 @@ button:disabled {
 
 /* Settings descriptions */
 #settings-panel .settings-description {
-  color: #666;
+  color: var(--color-muted);
   font-size: 11px;
   line-height: 1.5;
   margin: 12px 0;
@@ -258,7 +238,7 @@ button:disabled {
 
 /* Location accuracy */
 #location-accuracy {
-  color: #166534;
+  color: var(--color-success);
   font-size: 11px;
   line-height: 1.5;
   margin: 0;
@@ -269,7 +249,6 @@ button:disabled {
 }
 
 /* Detection radius */
-.setting-row,
 #settings-panel .radius-header {
   display: flex;
   justify-content: space-between;
@@ -279,39 +258,29 @@ button:disabled {
   font-size: 12px;
 }
 
-.setting-row strong,
 #settings-panel .radius-header strong {
   white-space: nowrap;
 }
 
-.settings input[type="range"],
 #settings-panel input[type="range"] {
   display: block;
   width: 100%;
   margin: 0;
   cursor: pointer;
-  accent-color: #ff8c00;
+  accent-color: var(--color-primary);
 }
 
-.range-labels,
 #settings-panel .radius-limits {
   display: flex;
   justify-content: space-between;
   margin-top: 6px;
-  color: #666;
+  color: var(--color-muted);
   font-size: 11px;
-}
-
-.settings-note {
-  color: #666;
-  font-size: 11px;
-  line-height: 1.5;
-  margin: 12px 0 0;
 }
 
 /* Settings feedback */
 #settings-status {
-  color: #166534;
+  color: var(--color-success);
   font-size: 11px;
   line-height: 1.5;
 }
@@ -327,38 +296,16 @@ button:disabled {
 
 /* Warn when location accuracy exceeds the selected detection radius. */
 #location-accuracy.accuracy-warning {
-  color: #b45309;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-  border-radius: 6px;
+  color: var(--color-warning);
+  background: var(--color-warning-background);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-input);
   padding: 10px;
   line-height: 1.5;
 }
 
 /* Improve empty-state readability in the Aircraft tab. */
-#aircraft-panel #page-header {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-#aircraft-panel #status-description {
-  color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
-  margin: 8px 0 0;
-}
-
-#aircraft-panel #details:empty {
-  display: none;
-}
-
+#aircraft-panel #details:empty,
 #aircraft-panel #error:empty {
   display: none;
-}
-
-#aircraft-panel #updated {
-  color: #64748b;
-  font-size: 11px;
-  line-height: 1.5;
 }
