@@ -209,7 +209,7 @@ FlightAlert/
     ├── app.js
     ├── background.js
     ├── config.js
-    ├── icon.png
+    ├── logo.png
     ├── index.html
     ├── logo.png
     └── manifest.json

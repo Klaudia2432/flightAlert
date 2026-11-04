@@ -44,7 +44,7 @@ export async function sendPassNotification(plane) {
       `flight-${plane.icao24}`,
       {
         type: 'basic',
-        iconUrl: 'icon.png',
+        iconUrl: 'logo.png',
         title: 'Aircraft may pass near your home',
         message,
         priority: 2
