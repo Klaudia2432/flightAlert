@@ -15,7 +15,7 @@ body {
   padding: 16px;
   margin: 0;
   color: #202124;
-  background: #ffffff;
+  background: #efd5c4;
 }
 
 h1 {
@@ -67,16 +67,17 @@ h1 {
 button {
   width: 100%;
   padding: 10px;
+  margin: 10px 0;
   border: 0;
   border-radius: 7px;
-  background: #1d4ed8;
+  background: #ff8c00;
   color: white;
   font-weight: 600;
   cursor: pointer;
 }
 
 button:hover:not(:disabled) {
-  background: #1e40af;
+  background: #ff8c00;
 }
 
 button:disabled {
@@ -178,7 +179,7 @@ button:disabled {
   width: 100%;
   margin: 0;
   cursor: pointer;
-  accent-color: #1d4ed8;
+  accent-color: #ff8c00;
 }
 
 .range-labels {

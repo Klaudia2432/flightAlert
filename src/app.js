@@ -14,6 +14,8 @@ const settingsStatus = document.getElementById("settings-status");
 const homeLatitude = document.getElementById("home-latitude");
 const homeLongitude = document.getElementById("home-longitude");
 const saveHomeButton = document.getElementById("save-home");
+const detectLocationButton = document.getElementById("detect-location");
+const locationAccuracy = document.getElementById("location-accuracy");
 
 let rateLimitTimer = null;
 let positionAgeTimer = null;
@@ -678,6 +680,78 @@ function saveHomeLocation() {
   );
 }
 
+// Detect and save the user's current location.
+function detectCurrentLocation() {
+  if (settingsSaving) {
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    settingsStatus.textContent =
+      "Geolocation is not supported by your browser.";
+    return;
+  }
+
+  detectLocationButton.disabled = true;
+  detectLocationButton.textContent = "Detecting location...";
+  settingsStatus.textContent =
+    "Getting your current location...";
+
+  navigator.geolocation.getCurrentPosition(
+  position => {
+    const { latitude, longitude, accuracy } = position.coords;
+
+    homeLatitude.value = latitude.toFixed(6);
+    homeLongitude.value = longitude.toFixed(6);
+
+    // Display the estimated accuracy of the detected location in miles.
+    const accuracyMiles = accuracy / 1609.344;
+
+    locationAccuracy.textContent =
+      `Estimated location accuracy: ±${accuracyMiles.toFixed(2)} mi`;
+
+      detectLocationButton.disabled = false;
+      detectLocationButton.textContent = "Use my current location";
+
+      // Save the detected coordinates using the existing settings flow.
+      saveHomeLocation();
+    },
+    error => {
+      detectLocationButton.disabled = false;
+      detectLocationButton.textContent = "Use my current location";
+
+      // Clear location accuracy if location detection fails.
+      locationAccuracy.textContent = "";
+
+      switch (error.code) {
+        case 1:
+          settingsStatus.textContent =
+            "Location access was denied. Enter coordinates manually.";
+          break;
+
+        case 2:
+          settingsStatus.textContent =
+            "Unable to determine your current location.";
+          break;
+
+        case 3:
+          settingsStatus.textContent =
+            "Location detection timed out. Please try again.";
+          break;
+
+        default:
+          settingsStatus.textContent =
+            "An error occurred while detecting your location.";
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    }
+  );
+}
+
 function refresh(forceRefresh = false) {
   if (isRefreshing || (forceRefresh && refreshButton.disabled)) {
     return;
@@ -730,6 +804,16 @@ radiusSlider.addEventListener("input", () => {
 
 radiusSlider.addEventListener("change", saveSettings);
 saveHomeButton.addEventListener("click", saveHomeLocation);
+detectLocationButton.addEventListener("click", detectCurrentLocation);
+
+// Clear location accuracy when coordinates are edited manually.
+homeLatitude.addEventListener("input", () => {
+  locationAccuracy.textContent = "";
+});
+
+homeLongitude.addEventListener("input", () => {
+  locationAccuracy.textContent = "";
+});
 
 // Update the popup when background monitoring receives new flight data.
 function handleFlightStatusChange(changes, areaName) {
